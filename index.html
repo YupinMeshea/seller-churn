@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seller Behavior Analysis — Jan 2024 to Feb 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --card: #1a1a26;
+    --border: #2a2a3d;
+    --green: #00e5a0;
+    --red: #ff4d6d;
+    --yellow: #ffc94d;
+    --blue: #4d9fff;
+    --purple: #b66dff;
+    --text: #e8e8f0;
+    --muted: #7070a0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 48px 24px; position: relative; z-index: 1; }
+
+  .header { margin-bottom: 56px; animation: fadeUp 0.6s ease both; }
+  .header-tag { display: inline-block; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--green); border: 1px solid var(--green); padding: 4px 12px; margin-bottom: 16px; }
+  .header h1 { font-family: 'Syne', sans-serif; font-size: clamp(32px, 5vw, 56px); font-weight: 800; line-height: 1.05; letter-spacing: -1px; color: #fff; margin-bottom: 12px; }
+  .header h1 span { color: var(--green); }
+  .header-sub { color: var(--muted); font-size: 13px; letter-spacing: 1px; }
+
+  .section-title { font-family: 'Syne', sans-serif; font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: var(--muted); margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Toggle */
+  .toggle-wrap { display: flex; gap: 0; margin-bottom: 24px; border: 1px solid var(--border); width: fit-content; }
+  .toggle-btn { padding: 10px 24px; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; border: none; background: transparent; color: var(--muted); transition: all 0.2s; }
+  .toggle-btn.active { background: var(--green); color: #000; font-weight: 700; }
+
+  .view { display: none; animation: fadeUp 0.4s ease both; }
+  .view.visible { display: block; }
+
+  /* Stats grid */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); padding: 24px; position: relative; overflow: hidden; transition: border-color 0.3s; }
+  .stat-card:hover { border-color: var(--green); }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.red::before { background: var(--red); }
+  .stat-card.yellow::before { background: var(--yellow); }
+  .stat-card.blue::before { background: var(--blue); }
+  .stat-card.purple::before { background: var(--purple); }
+  .stat-card.grey::before { background: var(--muted); }
+  .stat-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 38px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
+  .stat-card.green .stat-value { color: var(--green); }
+  .stat-card.red .stat-value { color: var(--red); }
+  .stat-card.yellow .stat-value { color: var(--yellow); }
+  .stat-card.blue .stat-value { color: var(--blue); }
+  .stat-card.purple .stat-value { color: var(--purple); }
+  .stat-card.grey .stat-value { color: var(--muted); }
+  .stat-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  /* Sub breakdown */
+  .sub-breakdown { background: var(--surface); border: 1px solid var(--border); padding: 20px 24px; margin-bottom: 32px; }
+  .sub-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .sub-note { font-size: 11px; color: var(--muted); margin-bottom: 20px; line-height: 1.6; }
+  .sub-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .sub-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .sub-label { font-size: 12px; color: var(--muted); flex: 1; }
+  .sub-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+  .sub-pct { font-size: 11px; color: var(--muted); margin-left: 4px; }
+  .bar-track { flex: 0 0 140px; height: 6px; background: var(--border); }
+  .bar-fill { height: 100%; }
+
+  /* Callout box */
+  .callout { padding: 16px 20px; margin-bottom: 32px; font-size: 12px; line-height: 1.7; border-left: 3px solid; }
+  .callout.green { background: rgba(0,229,160,0.06); border-color: var(--green); color: var(--muted); }
+  .callout.red { background: rgba(255,77,109,0.06); border-color: var(--red); color: var(--muted); }
+  .callout.yellow { background: rgba(255,201,77,0.06); border-color: var(--yellow); color: var(--muted); }
+  .callout strong { color: var(--text); }
+  .callout .big { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; display: block; margin-bottom: 4px; }
+
+  /* Two col */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+  @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+  .panel { background: var(--card); border: 1px solid var(--border); padding: 24px; }
+  .panel-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .panel-sub { font-size: 11px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .bar-label { font-size: 11px; color: var(--muted); width: 90px; flex-shrink: 0; text-align: right; }
+  .bar-track-full { flex: 1; height: 7px; background: var(--border); }
+  .bar-val { font-size: 11px; color: var(--text); width: 70px; flex-shrink: 0; }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th { text-align: left; padding: 8px 12px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(42,42,61,0.5); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; font-size: 10px; letter-spacing: 1px; }
+  .badge-red { background: rgba(255,77,109,0.15); color: var(--red); }
+  .badge-yellow { background: rgba(255,201,77,0.15); color: var(--yellow); }
+  .badge-green { background: rgba(0,229,160,0.15); color: var(--green); }
+
+  /* Insight grid */
+  .insight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 48px; animation: fadeUp 0.6s ease 0.4s both; }
+  .insight { background: var(--card); border: 1px solid var(--border); padding: 24px; }
+  .insight-icon { font-size: 26px; margin-bottom: 10px; display: block; }
+  .insight-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .insight-body { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .insight-body strong { color: var(--text); }
+  .hl-g { color: var(--green); font-weight: 500; }
+  .hl-r { color: var(--red); font-weight: 500; }
+  .hl-y { color: var(--yellow); font-weight: 500; }
+  .hl-b { color: var(--blue); font-weight: 500; }
+
+  .warning-box { background: rgba(255,77,109,0.06); border: 1px solid rgba(255,77,109,0.3); padding: 20px 24px; margin-bottom: 32px; }
+  .warning-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--red); margin-bottom: 8px; }
+  .warning-body { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .warning-body strong { color: var(--text); }
+
+  .divider { height: 1px; background: var(--border); margin: 48px 0; }
+
+  .footer { text-align: center; padding-top: 32px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-tag">Seller Behavior Analysis</div>
+    <h1>6,333 Sellers<br><span>Jan 2024 → Feb 2026</span></h1>
+    <div class="header-sub">Monthly items sold · Churn · Loyalty · Ramp-up · High performers</div>
+  </div>
+
+  <!-- ─────────────────────────────────────────
+       SECTION 1: ACTIVE SELLERS — TWO VIEWS
+  ───────────────────────────────────────── -->
+  <div class="section-title">01 — How Many Sellers Are Active Today?</div>
+
+  <div class="toggle-wrap">
+    <button class="toggle-btn active" onclick="showView('merged')">Merged View</button>
+    <button class="toggle-btn" onclick="showView('split')">Split View</button>
+  </div>
+
+  <!-- MERGED VIEW -->
+  <div id="view-merged" class="view visible">
+    <div class="callout green">
+      <strong class="big" style="color:var(--green)">2,655 sellers</strong>
+      are considered <strong>Active</strong> — meaning they made at least 1 sale in <strong>January 2026 or February 2026</strong> (or both). This is the simplest, broadest definition of "still on the platform."
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card green">
+        <div class="stat-label">Total Active</div>
+        <div class="stat-value">2,655</div>
+        <div class="stat-desc">Sold at least once in Jan or Feb 2026</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Churned</div>
+        <div class="stat-value">3,678</div>
+        <div class="stat-desc">Last sale was before Jan 2026, never returned</div>
+      </div>
+    </div>
+
+    <div class="sub-breakdown">
+      <div class="sub-title">Breaking Down the 2,805 Active Sellers</div>
+      <div class="sub-note">Not all active sellers are equally consistent — here's what's inside that number</div>
+
+      <div class="sub-row">
+        <div class="sub-dot" style="background:var(--green)"></div>
+        <div class="sub-label">Sold in BOTH Jan & Feb 2026</div>
+        <div class="bar-track"><div class="bar-fill" style="width:100%; background:var(--green); height:6px;"></div></div>
+        <div class="sub-val" style="color:var(--green)">2,103 <span class="sub-pct">(79.2%)</span></div>
+      </div>
+      <div class="sub-row">
+        <div class="sub-dot" style="background:var(--blue)"></div>
+        <div class="sub-label">Sold in January 2026 only</div>
+        <div class="bar-track"><div class="bar-fill" style="width:13.7%; background:var(--blue); height:6px;"></div></div>
+        <div class="sub-val" style="color:var(--blue)">256 <span class="sub-pct">(9.6%)</span></div>
+      </div>
+      <div class="sub-row">
+        <div class="sub-dot" style="background:var(--yellow)"></div>
+        <div class="sub-label">Sold in February 2026 only</div>
+        <div class="bar-track"><div class="bar-fill" style="width:15.8%; background:var(--yellow); height:6px;"></div></div>
+        <div class="sub-val" style="color:var(--yellow)">296 <span class="sub-pct">(11.1%)</span></div>
+      </div>
+
+      <div style="margin-top:16px; font-size:11px; color:var(--muted); line-height:1.7; padding-top:16px; border-top:1px solid var(--border);">
+        💡 <strong style="color:var(--text)">79% of active sellers sold in both months</strong> — a strong sign of consistency. The 256 who only sold in Jan may be at risk of churning. Worth monitoring in March.
+      </div>
+    </div>
+  </div>
+
+  <!-- SPLIT VIEW -->
+  <div id="view-split" class="view">
+    <div class="callout yellow">
+      This view splits the 2,655 active sellers into two groups based on <strong>their full history</strong> — not just recent months. A seller who sold in Feb 2026 but had a 3-month gap last year is classified differently from one who never had a gap.
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card blue">
+        <div class="stat-label">Consistently Active</div>
+        <div class="stat-value">1,800</div>
+        <div class="stat-desc">Selling in Jan/Feb 2026 with <strong>no historical gaps</strong> — never stopped</div>
+      </div>
+      <div class="stat-card yellow">
+        <div class="stat-label">Returning</div>
+        <div class="stat-value">855</div>
+        <div class="stat-desc">Selling in Jan/Feb 2026 but <strong>had at least 1 gap month</strong> in the past</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Churned</div>
+        <div class="stat-value">3,678</div>
+        <div class="stat-desc">Last sale was before Jan 2026 — did not come back</div>
+      </div>
+    </div>
+
+    <div class="sub-breakdown">
+      <div class="sub-title">How to Read This Split</div>
+      <div class="sub-note">Both "Consistently Active" and "Returning" sellers are selling right now — the difference is their history</div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:4px;">
+        <div style="background:rgba(77,159,255,0.06); border:1px solid rgba(77,159,255,0.2); padding:16px;">
+          <div style="font-size:10px; letter-spacing:2px; color:var(--blue); margin-bottom:8px;">CONSISTENTLY ACTIVE — 1,800</div>
+          <div style="font-size:11px; color:var(--muted); line-height:1.7;">
+            Joined the platform → sold every month (or nearly every month) → still selling today. <strong style="color:var(--text)">No significant gaps</strong> in their history. These are your most stable sellers.
+          </div>
+        </div>
+        <div style="background:rgba(255,201,77,0.06); border:1px solid rgba(255,201,77,0.2); padding:16px;">
+          <div style="font-size:10px; letter-spacing:2px; color:var(--yellow); margin-bottom:8px;">RETURNING — 855</div>
+          <div style="font-size:11px; color:var(--muted); line-height:1.7;">
+            Had at least 1 month of zero sales in the past, but <strong style="color:var(--text)">came back</strong> and are currently selling. They proved the platform is worth returning to — a valuable signal.
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px; font-size:11px; color:var(--muted); line-height:1.7; padding-top:16px; border-top:1px solid var(--border);">
+        ✅ <strong style="color:var(--text)">Combined = 2,655 active sellers</strong> — same number as the Merged View. The split just gives you more context on seller quality and history.
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 2: JAN 2024 LOYALTY -->
+  <div class="section-title">02 — Jan 2024 Cohort Loyalty</div>
+  <div class="callout green">
+    <strong>2,396 sellers</strong> joined in January 2024 — the largest single cohort. Here's how many are still with you today.
+  </div>
+
+  <div class="stats-grid" style="animation: fadeUp 0.5s ease both;">
+    <div class="stat-card green">
+      <div class="stat-label">Still Selling Today</div>
+      <div class="stat-value">1,077</div>
+      <div class="stat-desc">44.9% loyalty rate — sold in Jan or Feb 2026</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Consistently Active</div>
+      <div class="stat-value">689</div>
+      <div class="stat-desc">No gaps — selling continuously since Jan 2024</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-label">Returning</div>
+      <div class="stat-value">388</div>
+      <div class="stat-desc">Had gaps but came back — still selling today</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Churned</div>
+      <div class="stat-value">1,319</div>
+      <div class="stat-desc">55.1% — left and never came back</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 3: CHURN -->
+  <div class="section-title">03 — Churn Behavior</div>
+  <div class="two-col" style="animation: fadeUp 0.5s ease both;">
+    <div class="panel">
+      <div class="panel-title">When Do Sellers Churn?</div>
+      <div class="panel-sub">Number of active selling months before permanently leaving</div>
+      <div class="bar-row">
+        <div class="bar-label">1 month</div>
+        <div class="bar-track-full"><div class="bar-fill" style="width:100%; background:var(--red); height:7px;"></div></div>
+        <div class="bar-val">1,300 (35.3%)</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">2 months</div>
+        <div class="bar-track-full"><div class="bar-fill" style="width:28%; background:var(--red); height:7px;"></div></div>
+        <div class="bar-val">524 (14.2%)</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">3 months</div>
+        <div class="bar-track-full"><div class="bar-fill" style="width:15.7%; background:var(--yellow); height:7px;"></div></div>
+        <div class="bar-val">295 (8.0%)</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">4 months</div>
+        <div class="bar-track-full"><div class="bar-fill" style="width:11.8%; background:var(--yellow); height:7px;"></div></div>
+        <div class="bar-val">241 (6.6%)</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">5 months</div>
+        <div class="bar-track-full"><div class="bar-fill" style="width:10.3%; background:var(--yellow); height:7px;"></div></div>
+        <div class="bar-val">211 (5.7%)</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">6+ months</div>
+        <div class="bar-track-full"><div class="bar-fill" style="width:53.4%; background:var(--blue); height:7px;"></div></div>
+        <div class="bar-val">1,107 (30.1%)</div>
+      </div>
+      <div style="display:flex; gap:24px; margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+        <div>
+          <div style="font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--red);">5.0</div>
+          <div style="font-size:10px; color:var(--muted); letter-spacing:1px;">AVG MONTHS</div>
+        </div>
+        <div>
+          <div style="font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--yellow);">2</div>
+          <div style="font-size:10px; color:var(--muted); letter-spacing:1px;">MEDIAN MONTHS</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Items Sold Trend Before Churning</div>
+      <div class="panel-sub">Average items/month in the 3 months leading up to churn</div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="background:var(--surface); padding:16px; border-left:3px solid var(--muted);">
+          <div style="font-size:10px; color:var(--muted); letter-spacing:2px; margin-bottom:6px;">3 MONTHS BEFORE CHURN</div>
+          <div style="font-family:'Syne',sans-serif; font-size:32px; font-weight:800; color:var(--text);">7.5 <span style="font-size:13px; color:var(--muted);">items/mo</span></div>
+        </div>
+        <div style="background:var(--surface); padding:16px; border-left:3px solid var(--yellow);">
+          <div style="font-size:10px; color:var(--muted); letter-spacing:2px; margin-bottom:6px;">2 MONTHS BEFORE CHURN</div>
+          <div style="font-family:'Syne',sans-serif; font-size:32px; font-weight:800; color:var(--yellow);">8.1 <span style="font-size:13px; color:var(--muted);">items/mo</span></div>
+        </div>
+        <div style="background:var(--surface); padding:16px; border-left:3px solid var(--red);">
+          <div style="font-size:10px; color:var(--muted); letter-spacing:2px; margin-bottom:6px;">LAST MONTH BEFORE CHURN</div>
+          <div style="font-family:'Syne',sans-serif; font-size:32px; font-weight:800; color:var(--red);">6.0 <span style="font-size:13px; color:var(--muted);">items/mo</span></div>
+        </div>
+      </div>
+      <div style="margin-top:14px; padding:12px 14px; background:rgba(255,77,109,0.06); border:1px solid rgba(255,77,109,0.2); font-size:11px; color:var(--muted); line-height:1.7;">
+        ⚠ Any seller dropping <strong style="color:var(--text)">below 6 items/month</strong> is showing a pre-churn warning signal.
+      </div>
+    </div>
+  </div>
+
+  <!-- CHURN TABLE -->
+  <div class="panel" style="margin-bottom:32px; animation: fadeUp 0.5s ease both;">
+    <div class="panel-title">Churned Sellers by Avg Monthly Items Sold</div>
+    <div class="panel-sub" style="margin-bottom:16px;">Who churned — broken down by how much they were selling on average</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Avg Monthly Items</th>
+          <th>Churned Sellers</th>
+          <th>% of All Churned</th>
+          <th>Signal</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tr><td>1–3 items/mo</td><td>1,756</td><td>47.7%</td><td><span class="badge badge-red">Highest Risk</span></td></tr>
+        <tr><td>3–5 items/mo</td><td>499</td><td>13.6%</td><td><span class="badge badge-yellow">Medium</span></td></tr>
+        <tr><td>5–10 items/mo</td><td>510</td><td>13.9%</td><td><span class="badge badge-yellow">Medium</span></td></tr>
+        <tr><td>10–20 items/mo</td><td>370</td><td>10.1%</td><td><span class="badge badge-yellow">Surprising</span></td></tr>
+        <tr><td>20–30 items/mo</td><td>168</td><td>4.6%</td><td><span class="badge badge-green">Unexpected</span></td></tr>
+        <tr><td>30+ items/mo</td><td>375</td><td>10.2%</td><td><span class="badge badge-green">High Concern</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 4: HIGH PERFORMERS -->
+  <div class="section-title">04 — High Performer Churn</div>
+  <div class="warning-box" style="margin-bottom:24px;">
+    <div class="warning-title">⚠ High Performers Are Leaving Too</div>
+    <div class="warning-body">
+      Sellers who peaked at <strong>10, 20, or even 30+ items in a single month</strong> still churned. These counts are based on each seller's best single month — their ceiling. This is not a low-performer problem — something else is pushing good sellers away.
+    </div>
+  </div>
+  <div class="stats-grid" style="animation: fadeUp 0.5s ease both; margin-bottom:32px;">
+    <div class="stat-card red">
+      <div class="stat-label">Churned — peaked at 10–19 in a single month</div>
+      <div class="stat-value">401</div>
+      <div class="stat-desc">Avg 7.7 months active · Avg 6.9 items/mo overall · Best month: 10–19 items</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Churned — peaked at 20–29 in a single month</div>
+      <div class="stat-value">183</div>
+      <div class="stat-desc">Avg 8.3 months active · Avg 11.0 items/mo overall · Best month: 20–29 items</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Churned — peaked at 30+ in a single month</div>
+      <div class="stat-value">711</div>
+      <div class="stat-desc">Avg 11.0 months active · Avg 67.1 items/mo overall · Best month: 30–5,005 items</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 5: RAMP UP -->
+  <div class="section-title">05 — Ramp-Up to Full Potential</div>
+  <div class="two-col" style="animation: fadeUp 0.5s ease both;">
+    <div class="panel">
+      <div class="panel-title">Months to Reach Peak Sales</div>
+      <div class="panel-sub">Active & returning sellers — from first sale to their personal best month</div>
+      <div style="display:flex; gap:24px; margin-bottom:20px;">
+        <div>
+          <div style="font-family:'Syne',sans-serif; font-size:36px; font-weight:800; color:var(--green);">7.6</div>
+          <div style="font-size:10px; color:var(--muted); letter-spacing:1px;">AVG MONTHS TO PEAK</div>
+        </div>
+        <div>
+          <div style="font-family:'Syne',sans-serif; font-size:36px; font-weight:800; color:var(--blue);">5</div>
+          <div style="font-size:10px; color:var(--muted); letter-spacing:1px;">MEDIAN MONTHS TO PEAK</div>
+        </div>
+      </div>
+      <div class="bar-row"><div class="bar-label">Month 1</div><div class="bar-track-full"><div class="bar-fill" style="width:100%; background:var(--green); height:7px;"></div></div><div class="bar-val">466</div></div>
+      <div class="bar-row"><div class="bar-label">Month 2</div><div class="bar-track-full"><div class="bar-fill" style="width:84%; background:var(--green); height:7px;"></div></div><div class="bar-val">393</div></div>
+      <div class="bar-row"><div class="bar-label">Month 3</div><div class="bar-track-full"><div class="bar-fill" style="width:60%; background:var(--blue); height:7px;"></div></div><div class="bar-val">280</div></div>
+      <div class="bar-row"><div class="bar-label">Month 4</div><div class="bar-track-full"><div class="bar-fill" style="width:41%; background:var(--blue); height:7px;"></div></div><div class="bar-val">193</div></div>
+      <div class="bar-row"><div class="bar-label">Month 5</div><div class="bar-track-full"><div class="bar-fill" style="width:28%; background:var(--yellow); height:7px;"></div></div><div class="bar-val">129</div></div>
+      <div class="bar-row"><div class="bar-label">Month 6</div><div class="bar-track-full"><div class="bar-fill" style="width:39%; background:var(--yellow); height:7px;"></div></div><div class="bar-val">181</div></div>
+      <div class="bar-row"><div class="bar-label">Month 11</div><div class="bar-track-full"><div class="bar-fill" style="width:50%; background:var(--purple); height:7px;"></div></div><div class="bar-val">231 ↑ spike</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Active Sellers by Performance Level</div>
+      <div class="panel-sub">How many currently active/returning sellers are high performers?</div>
+      <div style="display:flex; flex-direction:column; gap:12px; margin-top:4px;">
+        <div style="background:var(--surface); padding:16px; display:flex; justify-content:space-between; align-items:center;">
+          <div><div style="font-size:12px; color:var(--text);">Avg 10+ items/month</div><div style="font-size:11px; color:var(--muted);">out of 2,655 active/returning</div></div>
+          <div style="font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--green);">1,774</div>
+        </div>
+        <div style="background:var(--surface); padding:16px; display:flex; justify-content:space-between; align-items:center;">
+          <div><div style="font-size:12px; color:var(--text);">Avg 20+ items/month</div><div style="font-size:11px; color:var(--muted);">consistent high volume</div></div>
+          <div style="font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--blue);">1,339</div>
+        </div>
+        <div style="background:var(--surface); padding:16px; display:flex; justify-content:space-between; align-items:center;">
+          <div><div style="font-size:12px; color:var(--text);">Avg 30+ items/month</div><div style="font-size:11px; color:var(--muted);">top performers</div></div>
+          <div style="font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--purple);">1,088</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- SECTION 6: KEY INSIGHTS -->
+  <div class="section-title">06 — Key Insights & Actions</div>
+  <div class="insight-grid">
+    <div class="insight">
+      <span class="insight-icon">🚨</span>
+      <div class="insight-title">Month 1 is Make-or-Break</div>
+      <div class="insight-body"><strong>35.3% of all churned sellers</strong> only ever had <span class="hl-r">1 active selling month</span>. If a seller doesn't return after their first sale, they almost never will. You need an aggressive <span class="hl-y">Day 30 reactivation</span> campaign.</div>
+    </div>
+    <div class="insight">
+      <span class="insight-icon">📉</span>
+      <div class="insight-title">6 Items/Month = Churn Signal</div>
+      <div class="insight-body">Sellers drop to <span class="hl-r">6 items/month</span> in their final active month. Any seller <span class="hl-y">below 5 items/month for 2 consecutive months</span> should trigger an automatic intervention or outreach.</div>
+    </div>
+    <div class="insight">
+      <span class="insight-icon">⭐</span>
+      <div class="insight-title">High Performers Still Leave</div>
+      <div class="insight-body"><span class="hl-r">711 sellers</span> peaked at 30+ items in a single month but still churned after ~11 months. Despite having high-volume capability, they left — signalling <span class="hl-y">platform or fee dissatisfaction</span>, not performance issues. Exit surveys are critical.</div>
+    </div>
+    <div class="insight">
+      <span class="insight-icon">⏱</span>
+      <div class="insight-title">Give Sellers 6 Months to Bloom</div>
+      <div class="insight-body">Median time to peak is <span class="hl-g">5 months</span> with a notable spike at <span class="hl-b">month 11</span>. Don't write off slow starters early — some take nearly a year to find their stride.</div>
+    </div>
+    <div class="insight">
+      <span class="insight-icon">🔁</span>
+      <div class="insight-title">865 Sellers Came Back</div>
+      <div class="insight-body"><span class="hl-y">855 returning sellers</span> took a break but came back. Win-back campaigns work. Target sellers inactive for 2–3 months with a <span class="hl-g">fee discount or bonus</span> to pull them back.</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Analysis based on 6,333 sellers (153 zero-sales, 400 excluded sellers, and 631 Nov-only inactive sellers removed) · Jan 2024 – Feb 2026 · Items sold monthly basis
+  </div>
+
+</div>
+
+<script>
+  function showView(view) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('visible'));
+    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('view-' + view).classList.add('visible');
+    event.target.classList.add('active');
+  }
+</script>
+</body>
+</html>
